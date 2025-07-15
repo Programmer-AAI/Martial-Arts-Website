@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Gallery | CCMWUA Martial Arts Academy</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Additional styles for admin login elements */
+    .admin-login-item {
+      margin-left: auto;
+    }
+    
+    .admin-login-link {
+      color: var(--gold);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+    
+    .admin-login-link:hover {
+      color: var(--primary);
+    }
+    
+    .admin-text {
+      display: inline;
+    }
+    
+    .secret-admin-link {
+      display: none;
+      text-align: center;
+      margin: 20px auto;
+      color: var(--gold);
+      font-weight: bold;
+    }
+    
+    @media (max-width: 767.98px) {
+      .admin-text {
+        display: none;
+      }
+      
+      .admin-login-item {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
+      }
+      
+      .nav-links.active .admin-login-link {
+        justify-content: center;
+        padding: 1rem;
+      }
+    }
+    
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="logo">
+      <img src="Ma img 2.jpg" alt="CCMWUA Logo">
+      <span class="logo-text">CCMWUA</span>
+    </div>
+    
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="index.html#styles">Styles</a></li>
+      <li><a href="index.html#instructors">Instructors</a></li>
+      <li><a href="index.html#classes">Classes</a></li>
+      <li><a href="gallery.html" class="active">Gallery</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="index.html#contact" class="cta-button">Get Started</a></li>
+    </ul>
+    
+    <div class="menu-toggle">
+      <i class="fas fa-bars"></i>
+    </div>
+  </nav>
+
+  <!-- Gallery Hero -->
+  <section class="gallery-hero">
+    <div class="hero-content">
+      <h1>Student <span>Gallery</span></h1>
+      <!-- <p>Witness the dedication and progress of our martial arts family</p> -->
+    </div>
+  </section>
+
+  <!-- Gallery Section -->
+  <section class="gallery-section">
+    <div class="gallery-filter">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="training">Training</button>
+      <button class="filter-btn" data-filter="belt-tests">Belt Tests</button>
+      <button class="filter-btn" data-filter="tournaments">Tournaments</button>
+      <button class="filter-btn" data-filter="special-events">Special Events</button>
+       <button class="filter-btn" data-filter="posters">Posters</button>
+    </div>
+    
+    <div class="gallery-grid" id="galleryGrid">
+      <!-- Items will be loaded dynamically -->
+    </div>
+  </section>
+
+  <!-- Footer -->
+   <footer class="footer">
+        <div class="footer-container">
+            <!-- About Column -->
+            <div class="footer-column">
+                <h3 class="footer-heading">About CCMWUA</h3>
+                <p>Master the art of discipline and self-defense at our premier martial arts WUSHU academy. Training since 2017.</p>
+                <div class="footer-logo">
+                    <img src="Ma img 2.jpg" alt="CCMWUA Logo">
+                    <span>CCMWUA</span>
+                </div>
+            </div>
+            
+            <!-- Quick Links Column -->
+            <div class="footer-column">
+                <h3 class="footer-heading">Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="#home"><i class="fas fa-chevron-right"></i> Home</a></li>
+                    <li><a href="#classes"><i class="fas fa-chevron-right"></i> Classes</a></li>
+                    <li><a href="#styles"><i class="fas fa-chevron-right"></i> Disciplines</a></li>
+                    <li><a href="#instructors"><i class="fas fa-chevron-right"></i> Instructors</a></li>
+                    <li><a href="#"><i class="fas fa-chevron-right"></i> Gallery</a></li>
+                    <!-- <li><a href="#"><i class="fas fa-chevron-right"></i> FAQ</a></li> -->
+                </ul>
+            </div>
+            
+            <!-- Contact Column -->
+            <div class="footer-column">
+                <h3 class="footer-heading">Contact Us</h3>
+                <ul class="footer-contact">
+                    <li><i class="fas fa-map-marker-alt"></i> Chittagong Rifle Club Parking Lot, 614 KC Dey Rd, Chattogram 4000</li>
+                    <li><i class="fas fa-phone-alt"></i> +880 1814-238443</li>
+                    <li><i class="fas fa-envelope"></i> ccmwua.ctg@gmail.com</li>
+                    <li><i class="fas fa-clock"></i> Sunday, Tuesday, Thursday, Friday: 4:00PM-6:30PM | Morning: Saturday, Monday, Wednesday: 7AM-9:30AM</li>
+                </ul>
+            </div>
+            
+            <!-- Social Media Column -->
+            <div class="footer-column">
+                <h3 class="footer-heading">Follow Us</h3>
+                <div class="social-links">
+                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Copyright -->
+        <div class="copyright">
+            <p>&copy; 2023 CCMWUA Martial Arts Academy. All Rights Reserved.</p>
+            <div class="legal-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Sitemap</a>
+            </div>
+        </div>
+    </footer>
+            <li class="admin-login-item">
+        <a href="admin-login.html" class="admin-login-link">
+          <i class="fas fa-user-shield"></i>
+          <span class="admin-text">Admin</span>
+        </a>
+      </li>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+  <script>
+    // Mobile menu toggle
+    const menuToggle = document.querySelector('.menu-toggle');
+    const navLinks = document.querySelector('.nav-links');
+    
+    menuToggle.addEventListener('click', () => {
+      navLinks.classList.toggle('active');
+    });
+
+    // Load gallery items from API
+    async function loadGallery() {
+      try {
+        const response = await fetch('/api/gallery');
+        const items = await response.json();
+        
+        const galleryGrid = document.getElementById('galleryGrid');
+        galleryGrid.innerHTML = '';
+        
+        items.forEach(item => {
+          const itemElement = document.createElement('a');
+          itemElement.href = item.image;
+          itemElement.setAttribute('data-lightbox', 'gallery');
+          itemElement.setAttribute('data-title', `${item.title} - ${item.description}`);
+          itemElement.className = `gallery-item ${item.category}`;
+          
+          itemElement.innerHTML = `
+            <img src="${item.image}" alt="${item.title}" loading="lazy">
+            <div class="gallery-overlay">
+              <div class="overlay-content">
+                <h3>${item.title}</h3>
+                <p>${item.description}</p>
+                <span class="gallery-category">${item.category}</span>
+              </div>
+            </div>
+          `;
+          
+          galleryGrid.appendChild(itemElement);
+        });
+        
+        // Initialize filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.getAttribute('data-filter');
+            document.querySelectorAll('.gallery-item').forEach(item => {
+              item.style.display = filter === 'all' || item.classList.contains(filter) 
+                ? 'block' 
+                : 'none';
+            });
+          });
+        });
+        
+        // Initialize Lightbox
+        lightbox.option({
+          'wrapAround': true,
+          'albumLabel': 'Image %1 of %2',
+          'positionFromTop': 100
+        });
+        
+      } catch (error) {
+        console.error('Error loading gallery:', error);
+      }
+    }
+
+    // Secret admin link (5 clicks on footer)
+    let clickCount = 0;
+    const footer = document.querySelector('footer');
+    const secretAdminLink = document.getElementById('secretAdminLink');
+    
+    footer.addEventListener('click', () => {
+      clickCount++;
+      if (clickCount === 5 && !secretAdminLink.querySelector('a')) {
+        const adminLink = document.createElement('a');
+        adminLink.href = 'admin-login.html';
+        adminLink.innerHTML = '<i class="fas fa-user-secret"></i> Admin Login';
+        adminLink.style.color = 'var(--gold)';
+        adminLink.style.fontWeight = 'bold';
+        secretAdminLink.appendChild(adminLink);
+        
+        // Hide after 10 seconds
+        setTimeout(() => {
+          secretAdminLink.style.opacity = '0';
+          setTimeout(() => secretAdminLink.removeChild(adminLink), 500);
+        }, 10000);
+      }
+    });
+
+    // Load gallery on page load
+    document.addEventListener('DOMContentLoaded', loadGallery);
+  </script>
+</body>
+</html>
