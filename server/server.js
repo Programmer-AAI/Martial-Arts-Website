@@ -4,19 +4,34 @@ const path = require('path');
 const multer = require('multer');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
+const cors = require('cors'); // Added CORS support
 
 const app = express();
-const PORT = 3000;
-const GALLERY_FILE = path.join(__dirname, 'gallery.json');
-const USERS_FILE = path.join(__dirname, 'users.json');
-const UPLOADS_DIR = path.join(__dirname, '../uploads');
 
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR);
-}
+// Use environment variable for port or default to 3000
+const PORT = process.env.PORT || 3000;
 
-app.use(express.static('../public'));
+// Use path.join for all paths to ensure cross-platform compatibility
+const DATA_DIR = path.join(__dirname, 'data');
+const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+// Create directories if they don't exist
+[DATA_DIR, UPLOADS_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Middleware
+app.use(cors({ 
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL 
+    : 'http://localhost:3000',
+  credentials: true 
+}));
+app.use(express.static('public')); // Serve from same directory
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json());
 app.use(cookieParser());
@@ -29,28 +44,58 @@ const storage = multer.diskStorage({
     cb(null, 'gallery-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
-// Load gallery items from file
+// Load gallery items from file with error handling
 function loadGallery() {
   try {
-    return JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf-8')) || [];
-  } catch {
+    if (fs.existsSync(GALLERY_FILE)) {
+      return JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf-8'));
+    }
+    return [];
+  } catch (error) {
+    console.error('Error loading gallery:', error);
     return [];
   }
 }
 
-// Save gallery items to file
+// Save gallery items to file with error handling
 function saveGallery(items) {
-  fs.writeFileSync(GALLERY_FILE, JSON.stringify(items, null, 2));
+  try {
+    fs.writeFileSync(GALLERY_FILE, JSON.stringify(items, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving gallery:', error);
+    return false;
+  }
 }
 
-// Load users from file
+// Load users from file with error handling
 function loadUsers() {
   try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-  } catch {
+    if (fs.existsSync(USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    }
     return [];
+  } catch (error) {
+    console.error('Error loading users:', error);
+    return [];
+  }
+}
+
+// Save users to file with error handling
+function saveUsers(users) {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving users:', error);
+    return false;
   }
 }
 
@@ -68,20 +113,58 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// User registration endpoint (added for completeness)
+app.post('/api/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password required' });
+    }
+
+    const users = loadUsers();
+    if (users.find(u => u.username === username)) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    users.push({ username, passwordHash });
+    if (!saveUsers(users)) {
+      return res.status(500).json({ message: 'Error saving user data' });
+    }
+
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Login route
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  const users = loadUsers();
-  const user = users.find(u => u.username === username);
-  
-  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-  const match = await bcrypt.compare(password, user.passwordHash);
-  if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password required' });
+    }
 
-  const sessionId = Date.now() + '-' + Math.random();
-  sessions[sessionId] = { username };
-  res.cookie('sessionId', sessionId, { httpOnly: true });
-  res.json({ message: 'Logged in' });
+    const users = loadUsers();
+    const user = users.find(u => u.username === username);
+    
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+    
+    const match = await bcrypt.compare(password, user.passwordHash);
+    if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const sessionId = Date.now() + '-' + Math.random();
+    sessions[sessionId] = { username };
+    res.cookie('sessionId', sessionId, { httpOnly: true, sameSite: 'strict' });
+    res.json({ message: 'Logged in' });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // Logout route
@@ -94,59 +177,96 @@ app.post('/api/logout', (req, res) => {
 
 // Get all gallery items (public)
 app.get('/api/gallery', (req, res) => {
-  res.json(loadGallery());
+  try {
+    res.json(loadGallery());
+  } catch (error) {
+    console.error('Error getting gallery:', error);
+    res.status(500).json({ message: 'Error loading gallery' });
+  }
 });
 
 // Add new gallery item (admin only)
 app.post('/api/gallery', authMiddleware, upload.single('image'), (req, res) => {
-  const { title, description, category } = req.body;
-  
-  if (!title || !description || !category || !req.file) {
-    return res.status(400).json({ 
-      message: 'Title, description, category, and image are required.' 
-    });
+  try {
+    const { title, description, category } = req.body;
+    
+    if (!title || !description || !category || !req.file) {
+      return res.status(400).json({ 
+        message: 'Title, description, category, and image are required.' 
+      });
+    }
+
+    const gallery = loadGallery();
+    const imageUrl = '/uploads/' + req.file.filename;
+    
+    const newItem = { 
+      id: Date.now().toString(),
+      title,
+      description,
+      category,
+      image: imageUrl,
+      date: new Date().toISOString()
+    };
+
+    gallery.push(newItem);
+    if (!saveGallery(gallery)) {
+      return res.status(500).json({ message: 'Error saving gallery data' });
+    }
+    
+    res.json({ message: 'Gallery item added successfully!', item: newItem });
+  } catch (error) {
+    console.error('Error adding gallery item:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-
-  const gallery = loadGallery();
-  const imageUrl = '/uploads/' + req.file.filename;
-  
-  const newItem = { 
-    id: Date.now().toString(),
-    title,
-    description,
-    category,
-    image: imageUrl,
-    date: new Date().toISOString()
-  };
-
-  gallery.push(newItem);
-  saveGallery(gallery);
-  
-  res.json({ message: 'Gallery item added successfully!', item: newItem });
 });
 
 // Delete gallery item (admin only)
 app.delete('/api/gallery/:id', authMiddleware, (req, res) => {
-  const gallery = loadGallery();
-  const itemId = req.params.id;
-  const itemIndex = gallery.findIndex(item => item.id === itemId);
+  try {
+    const gallery = loadGallery();
+    const itemId = req.params.id;
+    const itemIndex = gallery.findIndex(item => item.id === itemId);
 
-  if (itemIndex === -1) {
-    return res.status(404).json({ message: 'Gallery item not found' });
+    if (itemIndex === -1) {
+      return res.status(404).json({ message: 'Gallery item not found' });
+    }
+
+    const [removedItem] = gallery.splice(itemIndex, 1);
+    if (!saveGallery(gallery)) {
+      return res.status(500).json({ message: 'Error saving gallery data' });
+    }
+
+    // Delete the associated image file
+    const imagePath = path.join(UPLOADS_DIR, path.basename(removedItem.image));
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+
+    res.json({ message: 'Gallery item deleted', item: removedItem });
+  } catch (error) {
+    console.error('Error deleting gallery item:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
+});
 
-  const [removedItem] = gallery.splice(itemIndex, 1);
-  saveGallery(gallery);
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
-  // Delete the associated image file
-  const imagePath = path.join(UPLOADS_DIR, path.basename(removedItem.image));
-  if (fs.existsSync(imagePath)) {
-    fs.unlinkSync(imagePath);
-  }
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Unhandled error:', error);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
 
-  res.json({ message: 'Gallery item deleted', item: removedItem });
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+            
