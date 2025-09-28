@@ -7,19 +7,16 @@ const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
+const db = require('./db'); // Import SQLite database
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Paths
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
-// Ensure directories exist
-[DATA_DIR, UPLOADS_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Middleware
 app.use(cors({
@@ -48,27 +45,6 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// JSON file helpers
-function loadJSON(filePath) {
-  if (!fs.existsSync(filePath)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch (err) {
-    console.error('Error reading file', filePath, err);
-    return [];
-  }
-}
-
-function saveJSON(filePath, data) {
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    return true;
-  } catch (err) {
-    console.error('Error saving file', filePath, err);
-    return false;
-  }
-}
-
 // Multer setup for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
@@ -87,8 +63,7 @@ app.post('/api/login', async (req, res) => {
   if (!username || !password)
     return res.status(400).json({ message: 'Username and password required' });
 
-  const users = loadJSON(USERS_FILE);
-  const user = users.find(u => u.username === username);
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
   const match = await bcrypt.compare(password, user.passwordHash);
@@ -119,7 +94,8 @@ app.post('/api/logout', (req, res) => {
 
 // Get all gallery items (public)
 app.get('/api/gallery', (req, res) => {
-  res.json(loadJSON(GALLERY_FILE));
+  const gallery = db.prepare('SELECT * FROM gallery ORDER BY date DESC').all();
+  res.json(gallery);
 });
 
 // Add gallery item (admin)
@@ -128,39 +104,31 @@ app.post('/api/gallery', authMiddleware, upload.single('image'), (req, res) => {
   if (!title || !description || !category || !req.file)
     return res.status(400).json({ message: 'All fields including image are required' });
 
-  const gallery = loadJSON(GALLERY_FILE);
-  const newItem = {
-    id: Date.now().toString(),
-    title,
-    description,
-    category,
-    image: '/uploads/' + req.file.filename,
-    date: new Date().toISOString()
-  };
+  const imagePath = '/uploads/' + req.file.filename;
 
-  gallery.push(newItem);
-  if (!saveJSON(GALLERY_FILE, gallery))
-    return res.status(500).json({ message: 'Error saving gallery' });
+  const info = db.prepare(`
+    INSERT INTO gallery (title, description, category, image, date)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(title, description, category, imagePath, new Date().toISOString());
+
+  const newItem = db.prepare('SELECT * FROM gallery WHERE id = ?').get(info.lastInsertRowid);
 
   res.json({ message: 'Gallery item added', item: newItem });
 });
 
 // Delete gallery item (admin)
 app.delete('/api/gallery/:id', authMiddleware, (req, res) => {
-  const gallery = loadJSON(GALLERY_FILE);
-  const itemId = req.params.id;
-  const index = gallery.findIndex(i => i.id === itemId);
-  if (index === -1) return res.status(404).json({ message: 'Item not found' });
+  const id = req.params.id;
+  const item = db.prepare('SELECT * FROM gallery WHERE id = ?').get(id);
+  if (!item) return res.status(404).json({ message: 'Item not found' });
 
-  const [removed] = gallery.splice(index, 1);
-  if (!saveJSON(GALLERY_FILE, gallery))
-    return res.status(500).json({ message: 'Error saving gallery' });
+  db.prepare('DELETE FROM gallery WHERE id = ?').run(id);
 
   // Delete image file
-  const imgPath = path.join(UPLOADS_DIR, path.basename(removed.image));
+  const imgPath = path.join(UPLOADS_DIR, path.basename(item.image));
   if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
 
-  res.json({ message: 'Gallery item deleted', item: removed });
+  res.json({ message: 'Gallery item deleted', item });
 });
 
 // ----------------- Health & Fallback -----------------
